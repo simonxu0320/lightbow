@@ -1,0 +1,1238 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#070a18"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<title>光之弓 · 夜矢</title>
+<style>
+  :root{
+    --gold:#ffcf7a; --gold2:#ff9f43; --ink:#070a18;
+    --line:rgba(255,207,122,.26);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{
+    margin:0;padding:0;height:100%;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%,#141a38 0%,#0a0e22 45%,#03040a 100%);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    color:#f5ecd9; user-select:none;-webkit-user-select:none;
+    touch-action:none; overscroll-behavior:none;
+  }
+  body{display:flex;align-items:center;justify-content:center}
+  #stage{
+    position:relative;overflow:hidden;background:#070a18;
+    box-shadow:0 0 0 1px rgba(255,207,122,.10), 0 30px 90px rgba(0,0,0,.75);
+  }
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;
+       font-size:calc(26px * var(--u,1));
+       padding:calc(16px * var(--u,1));
+       padding-top:calc(16px * var(--u,1) + env(safe-area-inset-top,0px));
+       padding-bottom:calc(16px * var(--u,1) + env(safe-area-inset-bottom,0px));}
+  .topbar{display:flex;gap:calc(10px * var(--u,1));align-items:center;justify-content:space-between}
+  .chip{
+    display:flex;align-items:baseline;gap:.4em;
+    padding:.30em .62em;border-radius:999px;
+    background:rgba(10,14,32,.42);border:1px solid var(--line);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    font-size:.62em;letter-spacing:.04em;color:#cfd6ee;
+  }
+  .chip .k{color:#8f9ab8;font-size:.88em}
+  .chip b{color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums}
+  .chip.grow{flex:1;justify-content:center}
+  .chip.big b{font-size:1.18em}
+
+  #hWind{
+    position:absolute;left:50%;transform:translateX(-50%);
+    top:calc(86px * var(--u,1));
+    font-size:.56em;letter-spacing:.14em;color:#a9b6d8;
+    padding:.3em .9em;border-radius:999px;
+    background:rgba(10,14,32,.35);border:1px solid rgba(150,180,255,.16);
+    opacity:0;transition:opacity .25s;
+  }
+  #hWind.on{opacity:1}
+
+  #hCombo{
+    position:absolute;left:50%;top:26%;transform:translate(-50%,0) scale(.9);
+    font-size:1.05em;font-weight:800;letter-spacing:.06em;
+    color:#ffe3a8;text-shadow:0 0 22px rgba(255,180,80,.65);
+    opacity:0;transition:opacity .18s, transform .18s;
+  }
+  #hCombo.on{opacity:1;transform:translate(-50%,0) scale(1)}
+
+  .foot{position:absolute;left:calc(20px * var(--u,1));bottom:calc(16px * var(--u,1) + env(safe-area-inset-bottom,0px));
+        font-size:.5em;color:#7d87a6;letter-spacing:.08em}
+  #hMute{
+    position:absolute;right:calc(16px * var(--u,1));bottom:calc(12px * var(--u,1) + env(safe-area-inset-bottom,0px));
+    width:2.5em;height:2.5em;border-radius:50%;pointer-events:auto;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(10,14,32,.5);border:1px solid var(--line);
+    color:#c9d2ea;font-size:.56em;cursor:pointer;padding:0;
+    transition:transform .15s, color .15s;
+  }
+  #hMute:active{transform:scale(.92)}
+  #hMute.off{color:#5c6684;text-decoration:line-through}
+
+  /* ---------- 遮罩层 ---------- */
+  #overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,6,16,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    padding:calc(34px * var(--u,1));
+    opacity:1;transition:opacity .22s;pointer-events:auto;
+  }
+  #overlay.hidden{opacity:0;pointer-events:none}
+  .card{
+    width:100%;max-width:calc(560px * var(--u,1));
+    text-align:center;
+    padding:calc(38px * var(--u,1)) calc(30px * var(--u,1)) calc(30px * var(--u,1));
+    border-radius:calc(26px * var(--u,1));
+    background:linear-gradient(170deg,rgba(27,34,64,.94),rgba(10,13,28,.96));
+    border:1px solid rgba(255,207,122,.24);
+    box-shadow:0 0 0 1px rgba(0,0,0,.4) inset, 0 24px 70px rgba(0,0,0,.6);
+  }
+  .card h1{
+    margin:0 0 .1em;font-size:calc(58px * var(--u,1));line-height:1.12;
+    letter-spacing:.14em;font-weight:800;
+    background:linear-gradient(180deg,#fff3d2,#ffcf7a 55%,#e08a2e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 24px rgba(255,170,70,.35));
+  }
+  .card .sub{
+    margin:.2em 0 .9em;font-size:calc(20px * var(--u,1));letter-spacing:.5em;
+    color:#9aa6c8;padding-left:.5em;
+  }
+  .card p{
+    margin:0 0 1.2em;font-size:calc(22px * var(--u,1));line-height:1.65;color:#c3cce4;
+  }
+  .card p b{color:var(--gold);font-weight:600}
+  .card .stat{
+    display:flex;justify-content:center;gap:calc(26px * var(--u,1));
+    margin:0 0 1.1em;font-size:calc(20px * var(--u,1));color:#93a0c2;
+  }
+  .card .stat b{display:block;color:var(--gold);font-size:calc(30px * var(--u,1));
+                font-variant-numeric:tabular-nums;margin-top:.15em}
+  #oBtn{
+    pointer-events:auto;cursor:pointer;
+    font-family:inherit;font-size:calc(26px * var(--u,1));font-weight:700;letter-spacing:.22em;
+    padding:.72em 2.2em .72em 2.42em;border-radius:999px;border:0;
+    color:#2a1a05;
+    background:linear-gradient(180deg,#ffe1a4,#ffc062 45%,#f09a35);
+    box-shadow:0 8px 26px rgba(255,150,50,.35), 0 0 0 1px rgba(255,235,190,.5) inset;
+    transition:transform .12s, box-shadow .12s;
+  }
+  #oBtn:active{transform:translateY(2px) scale(.985);box-shadow:0 3px 12px rgba(255,150,50,.3)}
+  #oHint{
+    margin-top:1em;font-size:calc(19px * var(--u,1));color:#7c87a8;letter-spacing:.06em;
+    min-height:1.2em;
+  }
+  .card.warn h1{background:linear-gradient(180deg,#ffdcd6,#ff9a8a 60%,#d95c46)}
+</style>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBiMTAyNiIvPjxwYXRoIGQ9Ik0yMiA1IEMxMiA5IDEyIDIzIDIyIDI3IiBzdHJva2U9IiNmZmNmN2EiIHN0cm9rZS13aWR0aD0iMi40IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48bGluZSB4MT0iNiIgeTE9IjE2IiB4Mj0iMjUiIHkyPSIxNiIgc3Ryb2tlPSIjZmZlOWMwIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTI1IDE2IGwtNC40IC0yLjggTTI1IDE2IGwtNC40IDIuOCIgc3Ryb2tlPSIjZmZlOWMwIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
+<meta name="description" content="光之弓 · 夜矢 —— 单文件离线射箭小游戏。按住往下拉，松手放箭，拉得越满弓越亮。8 层灯笼夜战。"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="光之弓 · 夜矢"/>
+<meta property="og:description" content="按住往下拉，松手放箭。8 层灯笼夜战，弓拉满会亮成金色光弓。"/>
+<meta property="og:image" content="preview.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="光之弓 · 夜矢"/>
+<meta name="twitter:description" content="按住往下拉，松手放箭。8 层灯笼夜战。"/>
+<meta name="twitter:image" content="preview.png"/>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="hud">
+    <div class="topbar">
+      <div class="chip"><span class="k">层</span><b id="hLevel">1/8</b></div>
+      <div class="chip big"><span class="k">分</span><b id="hScore">0</b></div>
+      <div class="chip"><span class="k">箭</span><b id="hArrows">9</b></div>
+    </div>
+    <div id="hWind">风 → 40</div>
+    <div id="hCombo">连击 ×2</div>
+    <div class="foot" id="hBest">最佳 0</div>
+    <button id="hMute" aria-label="静音">♪</button>
+  </div>
+
+  <div id="overlay">
+    <div class="card" id="card">
+      <h1 id="oTitle">光之弓</h1>
+      <div class="sub" id="oSub">夜 · 矢</div>
+      <p id="oText">按住屏幕<b>向下拉</b>，拉得越满，箭飞得越远<br/>松手放箭，射穿灯笼芯心</p>
+      <div class="stat" id="oStat"></div>
+      <button id="oBtn">开 始</button>
+      <div id="oHint">8 层 · 灯笼会飘 · 有风</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   光之弓 · 夜矢
+   单文件离线小游戏 · 手机优先 · canvas + WebAudio
+   ========================================================= */
+
+/* ---------- 世界坐标（逻辑分辨率 720×1280） ---------- */
+const W = 720, H = 1280;
+const BOW = { x: 360, y: 985 };
+const MOON = { x: 588, y: 196, r: 54 };
+const GRAV = 1600;          // 重力 px/s²
+const PULL_MAX = 250;       // 满弓所需拖拽距离（世界坐标）
+const MIN_POWER = 0.12;     // 低于此力度视为取消
+const SPD_MIN = 820, SPD_MAX = 1900;
+const BEST_KEY = 'guangzhigong.yeshi.best.v1';
+const MUTE_KEY = 'guangzhigong.yeshi.mute.v1';
+
+/* ---------- 关卡表 ---------- */
+/* count 灯笼数 / r 半径 / y 纵向范围 / speed 横移速度 / bob 浮动幅度
+   arrows 本层箭数 / windMax 最大风力 */
+const LEVELS = [
+  { count: 4, r: 74, y: [225, 470], speed: 0,  bob: 16, arrows: 9,  windMax: 0   },
+  { count: 5, r: 66, y: [200, 495], speed: 0,  bob: 22, arrows: 9,  windMax: 40  },
+  { count: 5, r: 60, y: [192, 512], speed: 26, bob: 20, arrows: 8,  windMax: 55  },
+  { count: 6, r: 55, y: [188, 528], speed: 36, bob: 26, arrows: 9,  windMax: 70  },
+  { count: 6, r: 49, y: [184, 545], speed: 46, bob: 30, arrows: 8,  windMax: 85  },
+  { count: 7, r: 45, y: [180, 560], speed: 56, bob: 34, arrows: 9,  windMax: 105 },
+  { count: 8, r: 41, y: [178, 575], speed: 66, bob: 38, arrows: 9,  windMax: 125 },
+  { count: 9, r: 37, y: [176, 590], speed: 78, bob: 42, arrows: 10, windMax: 145 }
+];
+
+/* ---------- DOM ---------- */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+const stage = document.getElementById('stage');
+const $ = id => document.getElementById(id);
+const el = {
+  level: $('hLevel'), score: $('hScore'), arrows: $('hArrows'),
+  wind: $('hWind'), combo: $('hCombo'), best: $('hBest'), mute: $('hMute'),
+  overlay: $('overlay'), card: $('card'), oTitle: $('oTitle'), oSub: $('oSub'),
+  oText: $('oText'), oStat: $('oStat'), oBtn: $('oBtn'), oHint: $('oHint')
+};
+
+/* ---------- 状态 ---------- */
+const S = {
+  mode: 'title',        // title | playing | clear | fail | win
+  level: 0,
+  score: 0,
+  best: 0,
+  levelStartScore: 0,
+  arrowsLeft: 0,
+  combo: 0,
+  wind: 0,
+  targets: [],
+  flying: [],           // 飞行中的箭
+  parts: [],
+  floats: [],
+  time: 0,
+  shake: 0,
+  flash: 0,
+  freeze: 0,            // 命中顿帧
+  clearT: 0,            // 通关延迟
+  failCk: 0,
+  muted: false,
+  aim: { on: false, id: -1, sx: 0, sy: 0, cx: 0, cy: 0 },
+  power: 0,
+  shots: 0,
+  lang: 'zh'
+};
+
+/* ---------- 尺寸 ---------- */
+let VW = W, VH = H, U = 1;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const s = Math.min(vw / W, vh / H);
+  const cw = Math.max(1, Math.floor(W * s)), ch = Math.max(1, Math.floor(H * s));
+  stage.style.width = cw + 'px';
+  stage.style.height = ch + 'px';
+  stage.style.setProperty('--u', (cw / W).toFixed(4));
+  U = cw / W;
+  canvas.style.width = cw + 'px';
+  canvas.style.height = ch + 'px';
+  canvas.width = Math.floor(cw * dpr);
+  canvas.height = Math.floor(ch * dpr);
+  ctx.setTransform(dpr * (cw / W), 0, 0, dpr * (ch / H), 0, 0);
+}
+window.addEventListener('resize', resize, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+/* ---------- 声音（全部现场合成） ---------- */
+let AC = null, NOISE = null;
+function ac() {
+  if (!AC) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext;
+      AC = new C();
+      const n = Math.floor(AC.sampleRate * 1.0);
+      NOISE = AC.createBuffer(1, n, AC.sampleRate);
+      const d = NOISE.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    } catch (e) { AC = null; }
+  }
+  if (AC && AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(f0, f1, dur, type, vol, delay) {
+  const a = ac(); if (!a || S.muted) return;
+  const t = a.currentTime + (delay || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(f0, t);
+  if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function noise(dur, vol, type, freq, q, delay) {
+  const a = ac(); if (!a || S.muted || !NOISE) return;
+  const t = a.currentTime + (delay || 0);
+  const src = a.createBufferSource(); src.buffer = NOISE;
+  const f = a.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq || 800; f.Q.value = q || 1;
+  const g = a.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f); f.connect(g); g.connect(a.destination);
+  src.start(t); src.stop(t + dur + 0.02);
+}
+const SFX = {
+  charge(p) { tone(220 + p * 320, 260 + p * 380, 0.05, 'triangle', 0.05); },
+  twang(p) { tone(40 + 300 * p, 90, 0.16, 'sawtooth', 0.10); noise(0.10, 0.07, 'highpass', 1400, 0.7); },
+  hit() { tone(180, 62, 0.20, 'sine', 0.16); noise(0.12, 0.09, 'lowpass', 520, 1); },
+  bull() { tone(920, 1320, 0.16, 'triangle', 0.10); tone(1320, 1780, 0.22, 'triangle', 0.075, 0.07); noise(0.08, 0.04, 'highpass', 2600, 1); },
+  whoosh() { noise(0.20, 0.05, 'bandpass', 780, 1.6); },
+  clear() { [523, 659, 784, 1046].forEach((f, i) => tone(f, f, 0.28, 'triangle', 0.09, i * 0.09)); },
+  fail() { tone(320, 150, 0.42, 'sawtooth', 0.085); tone(210, 96, 0.5, 'sine', 0.07, 0.06); },
+  ui() { tone(660, 990, 0.07, 'triangle', 0.05); }
+};
+function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+/* ---------- 工具 ---------- */
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const TAU = Math.PI * 2;
+
+/* ---------- 背景元素（一次性生成） ---------- */
+const stars = [];
+for (let i = 0; i < 110; i++) {
+  stars.push({ x: Math.random() * W, y: Math.random() * H * 0.72, r: rnd(0.7, 2.3), ph: Math.random() * TAU, sp: rnd(0.4, 1.4) });
+}
+const ridges = [
+  { y: 900, amp: 110, seed: 0.31, col: '#121a38', alp: 0.85, sp: 0.10 },
+  { y: 985, amp: 86, seed: 1.77, col: '#0d1428', alp: 0.92, sp: 0.06 },
+  { y: 1075, amp: 62, seed: 3.21, col: '#080c1c', alp: 0.98, sp: 0.03 }
+];
+function ridgeY(r, x) {
+  return r.y - Math.sin(x * 0.0042 + r.seed) * r.amp * 0.55
+             - Math.sin(x * 0.0111 + r.seed * 2.3) * r.amp * 0.28
+             - Math.sin(x * 0.0217 + r.seed * 0.7) * r.amp * 0.16;
+}
+
+/* =========================================================
+   关卡 / 流程
+   ========================================================= */
+function aliveCount() { return S.targets.length; }
+
+function makeTargets(cfg) {
+  const out = [];
+  const minGap = 26;
+  for (let i = 0; i < cfg.count; i++) {
+    let best = null, bestD = -1;
+    for (let tries = 0; tries < 60; tries++) {
+      const r = cfg.r * rnd(0.92, 1.1);
+      const x = rnd(90, W - 90);
+      const y = rnd(cfg.y[0], cfg.y[1]);
+      // 避开顶部信息条和月亮，别把灯笼挂在 HUD 或月面上
+      if (y - r < 118) continue;
+      if (Math.hypot(x - MOON.x, y - MOON.y) < 132) continue;
+      let d = 1e9;
+      for (const t of out) d = Math.min(d, Math.hypot(t.x - x, t.y - y));
+      if (d > bestD) { bestD = d; best = { x, y, r }; }
+      if (d > cfg.r * 2 + minGap) break;
+    }
+    if (!best) best = { x: rnd(90, W - 90), y: rnd(cfg.y[0], cfg.y[1]), r: cfg.r };
+    const t = {
+      x: best.x, y: best.y, baseY: best.y, r: best.r,
+      ph: Math.random() * TAU,
+      bobAmp: cfg.bob * rnd(0.6, 1.4),
+      vx: (Math.random() < 0.5 ? -1 : 1) * cfg.speed * rnd(0.72, 1.15),
+      flash: 0, born: S.time, hitMe: 0
+    };
+    out.push(t);
+  }
+  return out;
+}
+
+function loadLevel(i) {
+  const cfg = LEVELS[i];
+  S.level = i;
+  S.levelStartScore = S.score;
+  S.arrowsLeft = cfg.arrows;
+  S.combo = 0;
+  S.wind = rnd(-cfg.windMax, cfg.windMax);
+  if (Math.abs(S.wind) < cfg.windMax * 0.18) S.wind = 0;
+  S.targets = makeTargets(cfg);
+  S.flying = [];
+  S.parts = [];
+  S.floats = [];
+  S.clearT = 0; S.failCk = 0; S.freeze = 0;
+  S.mode = 'playing';
+  S.aim.on = false;
+  hideOverlay();
+  updateHUD();
+}
+
+function startGame() {
+  S.score = 0; S.combo = 0; S.time = 0; S.shots = 0;
+  loadLevel(0);
+}
+
+function retryLevel() {
+  S.score = S.levelStartScore;
+  loadLevel(S.level);
+}
+
+function levelClear() {
+  const bonus = S.arrowsLeft * 25;
+  S.score += bonus;
+  S.mode = 'clear';
+  SFX.clear(); buzz([18, 60, 26]);
+  updateHUD();
+  saveBest();
+  const last = S.level >= LEVELS.length - 1;
+  setTimeout(() => {
+    if (S.mode !== 'clear') return;
+    if (last) { winGame(); return; }
+    showOverlay({
+      title: '第 ' + (S.level + 1) + ' 层 · 已过',
+      titleSub: 'CLEAR',
+      text: '剩余箭矢 <b>' + S.arrowsLeft + '</b> 支，奖励 <b>+' + bonus + '</b> 分',
+      stat: [['总分', S.score], ['最佳', S.best]],
+      btn: '入 下 一 层',
+      hint: '下一层灯笼更多、更小、风更大',
+      onBtn: () => { SFX.ui(); loadLevel(S.level + 1); }
+    });
+  }, 950);
+}
+
+function failLevel() {
+  S.mode = 'fail';
+  SFX.fail(); buzz([40, 80, 40]);
+  showOverlay({
+    title: '箭 尽',
+    titleSub: 'OUT OF ARROWS',
+    text: '这一层还剩 <b>' + aliveCount() + '</b> 盏灯笼没灭',
+    stat: [['总分', S.score], ['最佳', S.best]],
+    btn: '重 试 本 层',
+    hint: '试试拉满一些，或者借风偏移瞄准',
+    warn: true,
+    onBtn: () => { SFX.ui(); retryLevel(); }
+  });
+}
+
+function winGame() {
+  S.mode = 'win';
+  if (S.score > S.best) { S.best = S.score; saveBest(); }
+  updateHUD();
+  showOverlay({
+    title: '夜 尽',
+    titleSub: 'ALL CLEAR',
+    text: '八层灯火尽灭，弓弦尚温',
+    stat: [['总分', S.score], ['最佳', S.best]],
+    btn: '再 来 一 局',
+    hint: '最佳纪录已保存到本机',
+    onBtn: () => { SFX.ui(); startGame(); }
+  });
+}
+
+/* =========================================================
+   遮罩
+   ========================================================= */
+let overlayCb = null;
+function showOverlay(o) {
+  el.oTitle.textContent = o.title || '';
+  el.oSub.textContent = o.titleSub || '';
+  el.oSub.style.display = o.titleSub ? '' : 'none';
+  el.oText.innerHTML = o.text || '';
+  el.oStat.innerHTML = (o.stat || []).map(s =>
+    '<div><b>' + s[1] + '</b>' + s[0] + '</div>').join('');
+  el.oBtn.textContent = o.btn || '继 续';
+  el.oHint.textContent = o.hint || '';
+  el.card.classList.toggle('warn', !!o.warn);
+  el.overlay.classList.remove('hidden');
+  overlayCb = o.onBtn || null;
+}
+function hideOverlay() {
+  el.overlay.classList.add('hidden');
+  overlayCb = null;
+}
+
+/* =========================================================
+   HUD
+   ========================================================= */
+const hudCache = {};
+function setTxt(node, v) {
+  if (hudCache[node.id] === v) return;
+  hudCache[node.id] = v; node.textContent = v;
+}
+function updateHUD() {
+  if (S.score > S.best) S.best = S.score;   // 纪录边打边涨，反馈更爽
+  setTxt(el.level, (S.level + 1) + '/' + LEVELS.length);
+  setTxt(el.score, String(S.score));
+  setTxt(el.arrows, String(S.arrowsLeft));
+  setTxt(el.best, '最佳 ' + S.best);
+  const wx = Math.abs(S.wind) < 1 ? 0 : S.wind;
+  if (wx === 0) el.wind.classList.remove('on');
+  else {
+    el.wind.classList.add('on');
+    setTxt(el.wind, (wx > 0 ? '风  →  ' : '风  ←  ') + Math.round(Math.abs(wx)));
+  }
+  if (S.combo >= 2) { el.combo.classList.add('on'); setTxt(el.combo, '连击 ×' + S.combo); }
+  else el.combo.classList.remove('on');
+}
+
+/* =========================================================
+   输入
+   ========================================================= */
+function toWorld(e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) / r.width * W,
+    y: (e.clientY - r.top) / r.height * H
+  };
+}
+
+function aimAngle() {
+  const a = S.aim;
+  const dx = a.sx - a.cx, dy = a.sy - a.cy;
+  const ang = Math.atan2(dy, dx);      // 上方为负
+  const lo = -Math.PI + 0.16, hi = -0.16;
+  if (ang <= hi && ang >= lo) return ang;   // 已在上半区，直接用
+  // 越界：夹到最近的合法边界
+  return Math.abs(ang - lo) < Math.abs(ang - hi) ? lo : hi;
+}
+function aimPower() {
+  const a = S.aim;
+  const len = Math.hypot(a.sx - a.cx, a.sy - a.cy);
+  return clamp(len / PULL_MAX, 0, 1);
+}
+
+function onDown(e) {
+  if (S.mode !== 'playing') return;
+  if (S.aim.on) return;
+  ac();
+  const p = toWorld(e);
+  S.aim.on = true;
+  S.aim.id = e.pointerId;
+  S.aim.sx = p.x; S.aim.sy = p.y;
+  S.aim.cx = p.x; S.aim.cy = p.y;
+  S.power = 0;
+  if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch (err) {} }
+  e.preventDefault();
+}
+function onMove(e) {
+  if (!S.aim.on || e.pointerId !== S.aim.id) return;
+  const p = toWorld(e);
+  S.aim.cx = p.x; S.aim.cy = p.y;
+  const np = aimPower();
+  // 蓄力分段提示音
+  const b = Math.floor(np * 3);
+  if (b !== Math.floor(S.power * 3) && np > MIN_POWER) SFX.charge(np);
+  S.power = np;
+  e.preventDefault();
+}
+function onUp(e) {
+  if (!S.aim.on || (e.pointerId !== undefined && e.pointerId !== S.aim.id)) return;
+  S.aim.on = false;
+  const p = S.power;
+  const ang = aimAngle();
+  if (p >= MIN_POWER && S.mode === 'playing') fire(ang, p);
+  S.power = 0;
+  e.preventDefault();
+}
+
+canvas.addEventListener('pointerdown', onDown, { passive: false });
+canvas.addEventListener('pointermove', onMove, { passive: false });
+canvas.addEventListener('pointerup', onUp, { passive: false });
+canvas.addEventListener('pointercancel', e => { if (S.aim.on && e.pointerId === S.aim.id) { S.aim.on = false; S.power = 0; } }, { passive: true });
+
+el.oBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  ac();
+  const cb = overlayCb;
+  if (cb) cb();
+});
+el.mute.addEventListener('click', e => {
+  e.stopPropagation();
+  S.muted = !S.muted;
+  el.mute.classList.toggle('off', S.muted);
+  try { localStorage.setItem(MUTE_KEY, S.muted ? '1' : '0'); } catch (err) {}
+  if (!S.muted) SFX.ui();
+});
+
+/* =========================================================
+   射击
+   ========================================================= */
+function fire(ang, p) {
+  const sp = SPD_MIN + (SPD_MAX - SPD_MIN) * p;
+  S.flying.push({
+    x: BOW.x + Math.cos(ang) * 30,
+    y: BOW.y + Math.sin(ang) * 30,
+    vx: Math.cos(ang) * sp,
+    vy: Math.sin(ang) * sp,
+    ang: ang, age: 0, trail: []
+  });
+  S.arrowsLeft--;
+  S.shots++;
+  SFX.twang(p);
+  buzz(6);
+  S.shake = Math.max(S.shake, 2 + p * 4);
+  S.power = 0;
+  updateHUD();
+}
+function addPart(x, y, n, hue, spd, life) {
+  for (let i = 0; i < n && S.parts.length < 420; i++) {
+    const a = Math.random() * TAU, s = rnd(0.25, 1) * spd;
+    S.parts.push({
+      x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - spd * 0.15,
+      life: life * rnd(0.6, 1.2), max: life, hue: hue + rnd(-14, 14), r: rnd(1.4, 4.2), grav: 620
+    });
+  }
+}
+function addFloat(x, y, txt, col) {
+  S.floats.push({ x: x, y: y, txt: txt, col: col || '#ffe0a0', life: 0.95, max: 0.95 });
+}
+
+function hitTarget(t, a) {
+  // 精度判定改用「箭矢轨迹直线到灯笼圆心的最近距离」，
+  // 否则子步进会在圆边缘就触发命中，完美瞄准也永远只算擦边。
+  const vx = a.vx, vy = a.vy;
+  const vv = (vx * vx + vy * vy) || 1;
+  let k = ((t.x - a.x) * vx + (t.y - a.y) * vy) / vv;
+  if (k < 0) k = 0;
+  const d = Math.min(Math.hypot(a.x + vx * k - t.x, a.y + vy * k - t.y), t.r * 0.999);
+  const rr = d / t.r;
+  let base, col, label;
+  if (rr < 0.24) { base = 25; col = '#ffe9ad'; label = '芯心'; }
+  else if (rr < 0.55) { base = 15; col = '#ffd07a'; label = '命中'; }
+  else if (rr < 0.82) { base = 8; col = '#ffb45e'; label = ''; }
+  else { base = 4; col = '#ff9a4a'; label = ''; }
+
+  const mult = 1 + Math.min(S.combo, 8) * 0.25;
+  const gain = Math.round(base * mult);
+  S.score += gain;
+
+  if (rr < 0.22) {
+    SFX.bull(); buzz([0, 22, 40, 22]);
+    S.freeze = 0.07;
+    S.flash = 0.55;
+    S.shake = 12;
+    addPart(t.x, t.y, 34, 42, 640, 0.75);
+    addPart(t.x, t.y, 10, 40, 900, 0.5);
+    addFloat(t.x, t.y - t.r * 0.9, '芯心 +' + gain, '#ffe9ad');
+  } else {
+    SFX.hit(); buzz(12);
+    S.shake = 7;
+    addPart(t.x, t.y, 18, 30, 460, 0.62);
+    addFloat(t.x, t.y - t.r * 0.7, (label ? label + ' ' : '') + '+' + gain, col);
+  }
+  S.combo++;
+  // 移除灯笼
+  const i = S.targets.indexOf(t);
+  if (i >= 0) S.targets.splice(i, 1);
+  S.flying.splice(S.flying.indexOf(a), 1);
+  updateHUD();
+
+  if (aliveCount() === 0 && S.mode === 'playing') levelClear();
+}
+
+/* =========================================================
+   更新
+   ========================================================= */
+function update(dt) {
+  S.time += dt;
+  if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 46);
+  if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 2.6);
+
+  // 灯笼
+  for (const t of S.targets) {
+    t.ph += dt * 1.15;
+    t.y = t.baseY + Math.sin(t.ph) * t.bobAmp;
+    if (t.vx) {
+      t.x += t.vx * dt;
+      const lo = 70 + t.r * 0.15, hi = W - 70 - t.r * 0.15;
+      if (t.x < lo) { t.x = lo; t.vx = Math.abs(t.vx); }
+      if (t.x > hi) { t.x = hi; t.vx = -Math.abs(t.vx); }
+    }
+    if (t.flash > 0) t.flash = Math.max(0, t.flash - dt * 3);
+  }
+
+  // 飞行箭矢（子步长提高碰撞精度）
+  for (let i = S.flying.length - 1; i >= 0; i--) {
+    const a = S.flying[i];
+    if (!a) continue;
+    const steps = Math.max(1, Math.ceil(dt / (1 / 200)));
+    const h = dt / steps;
+    let dead = false;
+    for (let s = 0; s < steps && !dead; s++) {
+      a.vx += S.wind * h;
+      a.vy += GRAV * h;
+      a.x += a.vx * h;
+      a.y += a.vy * h;
+      a.age += h;
+      a.ang = Math.atan2(a.vy, a.vx);
+
+      for (const t of S.targets) {
+        if (Math.hypot(a.x - t.x, a.y - t.y) < t.r + 4) {
+          hitTarget(t, a); dead = true; break;
+        }
+      }
+      if (dead) break;
+      if (a.y > H + 60 || a.x < -120 || a.x > W + 120 || a.age > 6) {
+        dead = true;
+        S.flying.splice(i, 1);
+        if (S.combo > 0) { S.combo = 0; updateHUD(); }   // 落空才断连击
+        if (a.y > H + 60) {
+          SFX.whoosh();
+          addPart(a.x, H - 8, 7, 34, 180, 0.4);
+        }
+        break;
+      }
+    }
+    if (!dead) {
+      a.trail.push({ x: a.x, y: a.y, o: 1 });
+      if (a.trail.length > 16) a.trail.shift();
+    }
+  }
+
+  // 粒子
+  for (let i = S.parts.length - 1; i >= 0; i--) {
+    const p = S.parts[i];
+    p.vy += p.grav * dt;
+    p.vx *= (1 - 1.6 * dt);
+    p.vy *= (1 - 0.9 * dt);
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.life -= dt;
+    if (p.life <= 0) S.parts.splice(i, 1);
+  }
+  // 飘字
+  for (let i = S.floats.length - 1; i >= 0; i--) {
+    const f = S.floats[i];
+    f.y -= 62 * dt; f.life -= dt;
+    if (f.life <= 0) S.floats.splice(i, 1);
+  }
+
+  // 箭用尽判定
+  if (S.mode === 'playing' && S.arrowsLeft <= 0 && S.flying.length === 0 && S.targets.length > 0) {
+    S.failCk += dt;
+    if (S.failCk > 0.75) failLevel();
+  } else if (S.mode === 'playing') {
+    S.failCk = 0;
+  }
+}
+
+/* =========================================================
+   绘制
+   ========================================================= */
+function render() {
+  const t = S.time;
+  ctx.save();
+
+  // 屏幕震动
+  if (S.shake > 0.15) {
+    const s = S.shake;
+    ctx.translate(rnd(-s, s) * 0.5, rnd(-s, s) * 0.5);
+  }
+
+  drawSky(t);
+  drawMoon(t);
+  drawRidges(t);
+  drawMist(t);
+  drawTargets(t);
+  drawArrows();
+  drawParticles();
+  drawBow(t);
+  drawAim(t);
+  drawHint();
+  drawFloats();
+  drawVignette();
+  if (S.flash > 0) {
+    ctx.fillStyle = 'rgba(255,228,170,' + (S.flash * 0.20).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+
+function drawSky(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#080c1e');
+  g.addColorStop(0.32, '#121a3c');
+  g.addColorStop(0.62, '#1b2247');
+  g.addColorStop(0.82, '#241f38');
+  g.addColorStop(1, '#0e1020');
+  ctx.fillStyle = g;
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+
+  // 星
+  for (const s of stars) {
+    const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+    ctx.globalAlpha = tw * 0.8;
+    ctx.fillStyle = s.r > 1.6 ? '#ffe9c4' : '#cfd9ff';
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMoon(t) {
+  const mx = MOON.x, my = MOON.y, r = MOON.r;
+  const g = ctx.createRadialGradient(mx, my, r * 0.2, mx, my, r * 3.4);
+  g.addColorStop(0, 'rgba(255,236,196,.30)');
+  g.addColorStop(0.35, 'rgba(255,214,150,.12)');
+  g.addColorStop(1, 'rgba(255,200,120,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(mx, my, r * 3.4, 0, TAU); ctx.fill();
+
+  const m = ctx.createRadialGradient(mx - r * 0.3, my - r * 0.35, r * 0.1, mx, my, r);
+  m.addColorStop(0, '#fff8e6');
+  m.addColorStop(0.55, '#ffeccb');
+  m.addColorStop(1, '#f3cf98');
+  ctx.fillStyle = m;
+  ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.fill();
+
+  // 月晕环
+  ctx.strokeStyle = 'rgba(255,226,170,.18)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(mx, my, r * 1.5 + Math.sin(t * 0.8) * 3, 0, TAU); ctx.stroke();
+}
+
+function drawRidges(t) {
+  for (const rg of ridges) {
+    const off = Math.sin(t * rg.sp * 0.35) * 10;
+    ctx.beginPath();
+    ctx.moveTo(-40, H + 40);
+    for (let x = -40; x <= W + 40; x += 16) {
+      ctx.lineTo(x + off, ridgeY(rg, x));
+    }
+    ctx.lineTo(W + 40, H + 40);
+    ctx.closePath();
+    ctx.globalAlpha = rg.alp;
+    ctx.fillStyle = rg.col;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawMist(t) {
+  for (let i = 0; i < 3; i++) {
+    const y = 820 + i * 70;
+    const a = 0.05 + i * 0.018;
+    const g = ctx.createLinearGradient(0, y - 120, 0, y + 120);
+    g.addColorStop(0, 'rgba(140,170,255,0)');
+    g.addColorStop(0.5, 'rgba(140,170,255,' + a + ')');
+    g.addColorStop(1, 'rgba(140,170,255,0)');
+    ctx.fillStyle = g;
+    const dx = Math.sin(t * 0.25 + i) * 30;
+    ctx.fillRect(-80 + dx, y - 120, W + 160, 240);
+  }
+}
+
+function drawTargets(t) {
+  for (const tg of S.targets) {
+    const bob = Math.sin(tg.ph) * 1.2;
+    ctx.save();
+    ctx.translate(tg.x, tg.y + bob);
+
+    // 光晕
+    const glow = ctx.createRadialGradient(0, 0, tg.r * 0.2, 0, 0, tg.r * 2.6);
+    glow.addColorStop(0, 'rgba(255,176,84,.34)');
+    glow.addColorStop(0.45, 'rgba(255,140,60,.10)');
+    glow.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, tg.r * 2.6, 0, TAU); ctx.fill();
+
+    // 吊线
+    ctx.strokeStyle = 'rgba(180,196,240,.22)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(0, -tg.r - 60); ctx.lineTo(0, -tg.r * 0.86); ctx.stroke();
+
+    // 灯笼主体
+    const body = ctx.createRadialGradient(-tg.r * 0.28, -tg.r * 0.32, tg.r * 0.1, 0, 0, tg.r * 1.05);
+    body.addColorStop(0, '#fff3cf');
+    body.addColorStop(0.42, '#ffca72');
+    body.addColorStop(0.82, '#f08a34');
+    body.addColorStop(1, '#b4541c');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, tg.r * 0.94, tg.r, 0, 0, TAU);
+    ctx.fill();
+
+    // 竖楞
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, tg.r * 0.94, tg.r, 0, 0, TAU);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(150,66,20,.30)';
+    ctx.lineWidth = 1.6;
+    for (let k = -2; k <= 2; k++) {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, tg.r * 0.94 * Math.abs(k) * 0.34 + tg.r * 0.04, tg.r, 0, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 判定环
+    ctx.strokeStyle = 'rgba(120,52,12,.34)';
+    ctx.lineWidth = 1.6;
+    [0.8, 0.5, 0.22].forEach((k, idx) => {
+      ctx.beginPath();
+      ctx.arc(0, 0, tg.r * k, 0, TAU);
+      ctx.strokeStyle = 'rgba(110,46,10,' + (0.14 + idx * 0.10) + ')';
+      ctx.stroke();
+    });
+    ctx.fillStyle = 'rgba(255,246,214,.9)';
+    ctx.beginPath(); ctx.arc(0, 0, tg.r * 0.075, 0, TAU); ctx.fill();
+
+    // 顶盖 / 底穗
+    ctx.fillStyle = '#3d2a12';
+    ctx.fillRect(-tg.r * 0.34, -tg.r * 1.0, tg.r * 0.68, tg.r * 0.14);
+    ctx.fillStyle = '#8a4a12';
+    ctx.fillRect(-tg.r * 0.22, tg.r * 0.94, tg.r * 0.44, tg.r * 0.12);
+    ctx.strokeStyle = '#ffb45e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, tg.r * 1.06);
+    ctx.quadraticCurveTo(Math.sin(t * 2 + tg.ph) * 6, tg.r * 1.28, Math.sin(t * 2 + tg.ph) * 9, tg.r * 1.46);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+function drawArrows() {
+  for (const a of S.flying) {
+    // 尾迹
+    for (let i = 0; i < a.trail.length; i++) {
+      const p = a.trail[i];
+      const k = i / a.trail.length;
+      ctx.globalAlpha = k * 0.42;
+      ctx.fillStyle = '#ffd88a';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1 + k * 2.6, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.ang);
+    // 光尾
+    const g = ctx.createLinearGradient(-70, 0, 20, 0);
+    g.addColorStop(0, 'rgba(255,190,90,0)');
+    g.addColorStop(0.7, 'rgba(255,205,120,.55)');
+    g.addColorStop(1, 'rgba(255,240,200,.95)');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 3.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(14, 0); ctx.stroke();
+    // 箭头
+    ctx.fillStyle = '#fff3cf';
+    ctx.beginPath();
+    ctx.moveTo(20, 0); ctx.lineTo(9, -5.4); ctx.lineTo(9, 5.4);
+    ctx.closePath(); ctx.fill();
+    // 羽
+    ctx.strokeStyle = 'rgba(255,170,80,.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-26, 0); ctx.lineTo(-34, -5);
+    ctx.moveTo(-26, 0); ctx.lineTo(-34, 5);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of S.parts) {
+    const k = Math.max(0, p.life / p.max);
+    ctx.globalAlpha = k * 0.9;
+    ctx.fillStyle = 'hsl(' + p.hue + ',95%,' + (56 + k * 22) + '%)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.5 + k * 0.9), 0, TAU); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+}
+
+function drawBow(t) {
+  const aiming = (S.mode === 'playing') && S.aim.on;
+  const ang = aiming ? aimAngle() : -Math.PI / 2 + Math.sin(t * 0.7) * 0.03;
+  const p = aiming ? aimPower() : 0;
+
+  ctx.save();
+  ctx.translate(BOW.x, BOW.y);
+  ctx.rotate(ang);
+
+  // 蓄力光晕
+  if (p > 0.02) {
+    const g = ctx.createRadialGradient(-p * 70, 0, 4, 0, 0, 150 * (0.6 + p * 0.7));
+    g.addColorStop(0, 'rgba(255,214,140,' + (0.20 + p * 0.30) + ')');
+    g.addColorStop(1, 'rgba(255,160,60,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, 150 * (0.6 + p * 0.7), 0, TAU); ctx.fill();
+  }
+
+  // 弓身：平时是暗弓，拉满才亮成金色光弓（她的那把光弓）
+  const HALF = 126, BELLY = 88;
+  const qPt = u => {
+    const a = (1 - u) * (1 - u), b = 2 * (1 - u) * u;
+    return { x: b * BELLY, y: -a * HALF + u * u * HALF };
+  };
+  const thick = u => 2.6 + 7.6 * Math.sin(Math.PI * u);
+
+  // 分段描边：中间粗、两端收细，才像弓臂
+  const limb = (comp, color, wFn) => {
+    const N = 16;
+    ctx.globalCompositeOperation = comp;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+    for (let i = 0; i < N; i++) {
+      const q0 = qPt(i / N), q1 = qPt((i + 1) / N);
+      ctx.lineWidth = wFn((i + 0.5) / N);
+      ctx.beginPath();
+      ctx.moveTo(q0.x, q0.y);
+      ctx.lineTo(q1.x, q1.y);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  limb('source-over', 'rgba(255,206,130,.52)', u => thick(u) + 3);
+  limb('source-over', 'rgba(56,40,31,.97)', thick);
+  limb('source-over', 'rgba(255,190,110,.16)', u => thick(u) * 0.5);
+
+  if (p > 0.02) {
+    limb('lighter', 'rgba(255,150,52,' + (0.09 + p * 0.20).toFixed(3) + ')', u => thick(u) * 2.4);
+    limb('lighter', 'rgba(255,206,128,' + (0.28 + p * 0.55).toFixed(3) + ')', thick);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 3; k++) {
+      const u = (S.time * 0.55 + k / 3) % 1;
+      const q = qPt(u);
+      ctx.fillStyle = 'rgba(255,250,226,' + (0.30 + 0.55 * p).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(q.x, q.y, 2.2 + 1.6 * p, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // 弓梢
+  ctx.fillStyle = 'rgba(255,214,150,' + (0.45 + p * 0.55).toFixed(3) + ')';
+  ctx.beginPath(); ctx.arc(0, -HALF, 3.2 + p * 1.8, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, HALF, 3.2 + p * 1.8, 0, TAU); ctx.fill();
+
+  // 弓弦
+  const nock = -p * 76;
+  if (p > 0.02) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,186,92,' + (0.14 + p * 0.30).toFixed(3) + ')';
+    ctx.lineWidth = 3.4;
+  } else {
+    ctx.strokeStyle = 'rgba(226,238,255,.40)';
+    ctx.lineWidth = 1.5;
+  }
+  ctx.beginPath();
+  ctx.moveTo(0, -HALF); ctx.lineTo(nock, 0); ctx.lineTo(0, HALF);
+  ctx.stroke();
+  if (p > 0.02) {
+    ctx.strokeStyle = 'rgba(255,232,190,' + (0.26 + p * 0.42).toFixed(3) + ')';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(0, -HALF); ctx.lineTo(nock, 0); ctx.lineTo(0, HALF);
+    ctx.stroke();
+    // 弦上火星
+    for (let i = 0; i < 8; i++) {
+      const ph = (S.time * 0.75 + i * 0.618) % 1;
+      const side = (i % 2) ? 1 : -1;
+      const sx = nock - ph * 38;
+      const sy = side * (10 + ph * 54) * (0.4 + Math.sin(i * 2.1) * 0.4);
+      ctx.fillStyle = 'rgba(255,222,160,' + ((1 - ph) * (0.16 + 0.74 * p)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(sx, sy, 1 + ph * 1.6, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // 握把：弓腹上两道束绳（用细环表示，避免糊成黑块）
+  for (const u of [0.455, 0.545]) {
+    const q = qPt(u);
+    ctx.strokeStyle = 'rgba(34,22,16,.88)';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.moveTo(q.x - 7, q.y); ctx.lineTo(q.x + 7, q.y); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,206,130,' + (0.30 + p * 0.45).toFixed(3) + ')';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(q.x - 7, q.y); ctx.lineTo(q.x + 7, q.y); ctx.stroke();
+  }
+
+  // 搭在弦上的光箭（仅在瞄准时显示）
+  if (S.mode === 'playing' && aiming) {
+    const LEN = 150;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,206,132,' + (0.24 + p * 0.40).toFixed(3) + ')';
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(nock, 0); ctx.lineTo(nock + LEN, 0); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,248,226,' + (0.55 + p * 0.38).toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(nock, 0); ctx.lineTo(nock + LEN, 0); ctx.stroke();
+    const tipX = nock + LEN + 6;
+    const tg = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, 18);
+    tg.addColorStop(0, 'rgba(255,255,244,.95)');
+    tg.addColorStop(0.35, 'rgba(255,214,140,.5)');
+    tg.addColorStop(1, 'rgba(255,170,70,0)');
+    ctx.fillStyle = tg;
+    ctx.beginPath(); ctx.arc(tipX, 0, 18, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  ctx.restore();
+
+}
+
+function simTrail(ang, p, dur) {
+  const sp = SPD_MIN + (SPD_MAX - SPD_MIN) * p;
+  let x = BOW.x + Math.cos(ang) * 30, y = BOW.y + Math.sin(ang) * 30;
+  let vx = Math.cos(ang) * sp, vy = Math.sin(ang) * sp;
+  const h = 1 / 120, pts = [];
+  for (let t = 0; t < dur; t += h) {
+    vx += S.wind * h; vy += GRAV * h;
+    x += vx * h; y += vy * h;
+    pts.push({ x: x, y: y });
+    if (y > H + 30 || x < -60 || x > W + 60) break;
+  }
+  return pts;
+}
+
+function drawAim() {
+  if (S.mode !== 'playing' || !S.aim.on) return;
+  const p = aimPower();
+  if (p < 0.02) return;
+  const ang = aimAngle();
+
+  // 预测轨迹
+  const pts = simTrail(ang, p, 0.33 + 0.4 * p);
+  for (let i = 2; i < pts.length; i += 2) {
+    const k = 1 - i / pts.length;
+    ctx.globalAlpha = 0.08 + k * 0.55;
+    ctx.fillStyle = '#ffe0a4';
+    ctx.beginPath();
+    ctx.arc(pts[i].x, pts[i].y, 1.3 + k * 1.9, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHint() {
+  if (S.mode !== 'playing' || S.aim.on || S.shots > 0) return;
+  const pulse = 0.5 + 0.5 * Math.sin(S.time * 3.2);
+  ctx.save();
+  ctx.globalAlpha = 0.32 + 0.5 * pulse;
+  ctx.fillStyle = '#ffd88a';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '600 34px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('按住 · 向下拉 · 松手', W / 2, BOW.y - 238);
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 20, BOW.y - 198);
+  ctx.lineTo(W / 2 + 20, BOW.y - 198);
+  ctx.lineTo(W / 2, BOW.y - 164);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFloats() {
+  for (const f of S.floats) {
+    const k = Math.max(0, f.life / f.max);
+    ctx.globalAlpha = Math.min(1, k * 1.6);
+    ctx.font = '700 34px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(20,12,4,.55)';
+    ctx.strokeText(f.txt, f.x, f.y);
+    ctx.fillStyle = f.col;
+    ctx.fillText(f.txt, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawVignette() {
+  const g = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.18, W / 2, H * 0.5, H * 0.78);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.72, 'rgba(0,0,0,.20)');
+  g.addColorStop(1, 'rgba(0,0,0,.62)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/* =========================================================
+   主循环
+   ========================================================= */
+let last = 0;
+function frame(t) {
+  requestAnimationFrame(frame);
+  if (!last) last = t;
+  let dt = (t - last) / 1000;
+  last = t;
+  if (dt > 0.05) dt = 0.05;
+  if (dt < 0) dt = 0;
+  if (S.freeze > 0) { S.freeze -= dt; dt *= 0.18; }
+  if (S.mode === 'title') S.time += dt;
+  update(dt);
+  render();
+}
+document.addEventListener('visibilitychange', () => { last = 0; });
+
+/* =========================================================
+   启动
+   ========================================================= */
+function saveBest() {
+  try { localStorage.setItem(BEST_KEY, String(S.best)); } catch (e) {}
+}
+function boot() {
+  try { S.best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) { S.best = 0; }
+  try { S.muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+  el.mute.classList.toggle('off', S.muted);
+  resize();
+  updateHUD();
+  showOverlay({
+    title: '光之弓',
+    titleSub: '夜 · 矢',
+    text: '按住屏幕 <b>向下拉</b>，拉得越满飞得越远<br/>松手放箭，命中<b>灯笼芯心</b>得高分',
+    stat: [['最高纪录', S.best]],
+    btn: '开 始',
+    hint: '8 层 · 灯笼漂浮 · 注意风向',
+    onBtn: () => { SFX.ui(); startGame(); }
+  });
+  requestAnimationFrame(frame);
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
